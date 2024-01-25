@@ -327,28 +327,28 @@ def main(args):
                     buffer = buffer[:args.max_experts]
                 random.shuffle(buffer)
 
-        start_epoch = np.random.randint(0, args.max_start_epoch)
-        starting_params = expert_trajectory[start_epoch]
+        start_epoch = np.random.randint(0, args.max_start_epoch)#需要修改成一个for函数
+        starting_params = expert_trajectory[start_epoch]#开始网络的参数
 
-        target_params = expert_trajectory[start_epoch+args.expert_epochs]
-        target_params = torch.cat([p.data.to(args.device).reshape(-1) for p in target_params], 0)
+        target_params = expert_trajectory[start_epoch+args.expert_epochs]#目标参数
+        target_params = torch.cat([p.data.to(args.device).reshape(-1) for p in target_params], 0)#转成一维
 
-        student_params = [torch.cat([p.data.to(args.device).reshape(-1) for p in starting_params], 0).requires_grad_(True)]
+        student_params = [torch.cat([p.data.to(args.device).reshape(-1) for p in starting_params], 0).requires_grad_(True)]#学生参数就是开始参数
 
-        starting_params = torch.cat([p.data.to(args.device).reshape(-1) for p in starting_params], 0)
+        starting_params = torch.cat([p.data.to(args.device).reshape(-1) for p in starting_params], 0)#开始参数展开
 
         syn_images = image_syn
 
         y_hat = label_syn.to(args.device)
 
-        param_loss_list = []
+        param_loss_list = []#参数损失
         param_dist_list = []
         indices_chunks = []
 
         for step in range(args.syn_steps):
 
             if not indices_chunks:
-                indices = torch.randperm(len(syn_images))
+                indices = torch.randperm(len(syn_images))#取batch？
                 indices_chunks = list(torch.split(indices, args.batch_syn))
 
             these_indices = indices_chunks.pop()
@@ -358,22 +358,23 @@ def main(args):
             this_y = y_hat[these_indices]
 
             if args.texture:
+                #算法步骤1，从真实数据集中初始化压缩数据集
                 x = torch.cat([torch.stack([torch.roll(im, (torch.randint(im_size[0]*args.canvas_size, (1,)), torch.randint(im_size[1]*args.canvas_size, (1,))), (1,2))[:,:im_size[0],:im_size[1]] for im in x]) for _ in range(args.canvas_samples)])
                 this_y = torch.cat([this_y for _ in range(args.canvas_samples)])
 
             if args.dsa and (not args.no_aug):
-                x = DiffAugment(x, args.dsa_strategy, param=args.dsa_param)
+                x = DiffAugment(x, args.dsa_strategy, param=args.dsa_param)#数据增强
 
-            if args.distributed:
+            if args.distributed:#是否启用分布式训练
                 forward_params = student_params[-1].unsqueeze(0).expand(torch.cuda.device_count(), -1)
             else:
                 forward_params = student_params[-1]
             x = student_net(x, flat_param=forward_params)
             ce_loss = criterion(x, this_y)
 
-            grad = torch.autograd.grad(ce_loss, student_params[-1], create_graph=True)[0]
+            grad = torch.autograd.grad(ce_loss, student_params[-1], create_graph=True)[0]#根据CE_LOSS更新梯度
 
-            student_params.append(student_params[-1] - syn_lr * grad)
+            student_params.append(student_params[-1] - syn_lr * grad)#学生参数
 
 
         param_loss = torch.tensor(0.0).to(args.device)
@@ -391,7 +392,7 @@ def main(args):
 
         param_loss /= param_dist
 
-        grand_loss = param_loss
+        grand_loss = param_loss#算法中的步骤15
 
         optimizer_img.zero_grad()
         optimizer_lr.zero_grad()
