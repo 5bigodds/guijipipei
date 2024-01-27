@@ -1,4 +1,6 @@
 import os
+os.environ["WANDB_API_KEY"] = 'e1977b366598fe82bd0f31734e945997775e238a' # 将引号内的+替换成自己在wandb上的一串值
+os.environ["WANDB_MODE"] = "offline"   # 离线  （此行代码不用修改）
 import argparse
 import numpy as np
 import torch
