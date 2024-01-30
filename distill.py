@@ -238,7 +238,7 @@ def main(args):
             with torch.no_grad():
                 image_save = image_syn.cuda()
 
-                save_dir = os.path.join(".", "logged_files", args.dataset, wandb.run.name)
+                save_dir = os.path.join('.', 'logged_files', args.dataset, wandb.run.name)
 
                 if not os.path.exists(save_dir):
                     os.makedirs(save_dir)
@@ -329,6 +329,7 @@ def main(args):
                     buffer = buffer[:args.max_experts]
                 random.shuffle(buffer)
 
+#for start_epoch in range(0,10):
         start_epoch = np.random.randint(0, args.max_start_epoch)#需要修改成一个for函数
         starting_params = expert_trajectory[start_epoch]#开始网络的参数
 
@@ -391,7 +392,8 @@ def main(args):
 
         param_loss /= num_params
         param_dist /= num_params
-
+#       print(param_loss)
+#       print(param_dist)
         param_loss /= param_dist
 
         grand_loss = param_loss#算法中的步骤15
